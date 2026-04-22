@@ -475,7 +475,7 @@ with tab3:
     st.dataframe(rename_for_display(emp_tabla), use_container_width=True)
 
 with tab4:
-    st.subheader("Radiografía por central")
+    st.subheader("Radiografía por central generadora")
     vista = filtered[[
         c for c in [
             "Potencia id",
@@ -498,18 +498,31 @@ with tab4:
         ] if c in filtered.columns
     ]].copy()
 
-    opciones_orden = [
-        c for c in [
-            "psuf_def",
-            "Merma MW",
-            "Ratio reconocimiento",
-            "Ifor [pu]",
-            "Variabilidad subperiodos"
-        ] if c in vista.columns
-    ]
-    orden = st.selectbox("Ordenar por", opciones_orden, index=0)
+    opciones_orden = {
+    "Potencia definitiva [MW]": "psuf_def",
+    "Merma [MW]": "Merma MW",
+    "Ratio reconocimiento [%]": "Ratio reconocimiento",
+    "Indisponibilidad forzada [pu]": "Ifor [pu]",
+    "Variabilidad subperiodos [MW]": "Variabilidad subperiodos"
+}
+
+    # Solo dejar opciones existentes
+    opciones_validas = {
+        k: v for k, v in opciones_orden.items()
+        if v in vista.columns
+    }
+
+    orden_label = st.selectbox(
+        "Ordenar por",
+        list(opciones_validas.keys()),
+        index=0
+    )
+
     asc = st.toggle("Orden ascendente", value=False)
-    vista = vista.sort_values(orden, ascending=asc)
+
+    columna_orden = opciones_validas[orden_label]
+
+    vista = vista.sort_values(columna_orden, ascending=asc)
 
     vista_tabla = vista.copy()
     if "Ratio reconocimiento" in vista_tabla.columns:
