@@ -34,7 +34,8 @@ DISPLAY_NAMES = {
     "psuf_def": "Potencia definitiva [MW]",
     "Merma MW": "Merma [MW]",
     "Merma %": "Merma [%]",
-    "Ratio reconocimiento": "Reconocimiento [%]",
+    "Ratio reconocimiento": "Ratio reconocimiento [%]",
+    "ratio": "Ratio reconocimiento [%]",
     "Psuf promedio subperiodos": "Potencia promedio subperiodos [MW]",
     "Variabilidad subperiodos": "Variabilidad subperiodos [MW]",
     "Psuf min subperiodo": "Potencia mínima subperiodo [MW]",
@@ -68,6 +69,9 @@ def fmt_mw(x: float) -> str:
     if pd.isna(x):
         return "-"
     return f"{x:,.1f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+def fmt_pct_series(s: pd.Series) -> pd.Series:
+    return (s * 100).round(1).astype(str).str.replace(".", ",", regex=False) + "%"
 
 
 @st.cache_data(show_spinner=False)
@@ -218,7 +222,7 @@ with st.sidebar:
     empresas_opciones = ["Todas"] + empresas
     subsistemas_opciones = ["Todos"] + subsistemas
 
-    filtro_tecnologia = st.selectbox("Tipo tecnología", tecnologias_opciones, index=0)
+    filtro_tecnologia = st.selectbox("Tecnología", tecnologias_opciones, index=0)
     filtro_empresa = st.selectbox("Empresa", empresas_opciones, index=0)
     filtro_subsistema = st.selectbox("Subsistema", subsistemas_opciones, index=0)
 
@@ -296,7 +300,7 @@ with fila1[0]:
 with fila1[1]:
     kpi_card("Empresas", f"{total_empresas:,}".replace(",", "."))
 with fila1[2]:
-    kpi_card("Reconocimiento total", f"{ratio_total:.1%}" if pd.notna(ratio_total) else "-")
+    kpi_card("Ratio reconocimiento sistema", f"{ratio_total:.1%}" if pd.notna(ratio_total) else "-")
 
 with fila2[0]:
     kpi_card("Capacidad máxima [MW]", fmt_mw(pmax_total))
@@ -355,27 +359,33 @@ with tab1:
         .sum(numeric_only=True)
         .reset_index()
     )
-    st.dataframe(tabla_resumen, use_container_width=True)
+    st.dataframe(rename_for_display(tabla_resumen), use_container_width=True)
 
 with tab2:
     st.subheader("Radiografía por tecnología")
     tech = (
-        filtered.groupby("Tipo tecnologia", dropna=False)
-        .agg(
-            unidades=("Potencia id", "nunique"),
-            pmax=("Pmax [MW]", "sum"),
-            pini=("Pini [MW]", "sum"),
-            psuf_pre=("psuf_pre", "sum"),
-            psuf_def=("psuf_def", "sum"),
-            ifor_prom=("Ifor [pu]", "mean"),
-            fmm_prom=("Fmm [pu]", "mean"),
-            ratio=("Ratio reconocimiento", "mean"),
-        )
-        .reset_index()
-        .sort_values("psuf_def", ascending=False)
+    filtered.groupby("Tipo tecnologia", dropna=False)
+    .agg(
+        unidades=("Potencia id", "nunique"),
+        pmax=("Pmax [MW]", "sum"),
+        pini=("Pini [MW]", "sum"),
+        psuf_pre=("psuf_pre", "sum"),
+        psuf_def=("psuf_def", "sum"),
+        ifor_prom=("Ifor [pu]", "mean"),
+        fmm_prom=("Fmm [pu]", "mean"),
+        ratio=("Ratio reconocimiento", "mean"),
     )
+    .reset_index()
+    .sort_values("psuf_def", ascending=False)
+)
 
-    fig = px.bar(tech, x="Tipo tecnologia", y="psuf_def", title="Psuf definitiva por tecnología", text_auto=".2s")
+    fig = px.bar(
+        tech,
+        x="Tipo tecnologia",
+        y="psuf_def",
+        title="Potencia definitiva por tecnología",
+        text_auto=".2s"
+    )
     st.plotly_chart(fig, use_container_width=True)
 
     fig = px.scatter(
@@ -384,30 +394,41 @@ with tab2:
         y="ratio",
         size="pmax",
         hover_name="Tipo tecnologia",
-        title="IFOR promedio vs ratio de reconocimiento",
+        title="Indisponibilidad forzada promedio vs ratio reconocimiento",
     )
+    fig.update_yaxes(tickformat=".1%")
     st.plotly_chart(fig, use_container_width=True)
 
-    st.dataframe(tech, use_container_width=True)
+    tech_tabla = tech.copy()
+    tech_tabla["ratio"] = fmt_pct_series(tech_tabla["ratio"])
+    st.dataframe(rename_for_display(tech_tabla), use_container_width=True)
 
 with tab3:
     st.subheader("Radiografía por empresa")
     emp = (
-        filtered.groupby("Nombre empresa", dropna=False)
-        .agg(
-            unidades=("Potencia id", "nunique"),
-            pmax=("Pmax [MW]", "sum"),
-            psuf_def=("psuf_def", "sum"),
-            merma=("Merma MW", "sum"),
-            ratio=("Ratio reconocimiento", "mean"),
-        )
-        .reset_index()
-        .sort_values("psuf_def", ascending=False)
+    filtered.groupby("Nombre empresa", dropna=False)
+    .agg(
+        unidades=("Potencia id", "nunique"),
+        pmax=("Pmax [MW]", "sum"),
+        psuf_def=("psuf_def", "sum"),
+        merma=("Merma MW", "sum"),
+        ratio=("Ratio reconocimiento", "mean"),
     )
+    .reset_index()
+    .sort_values("psuf_def", ascending=False)
+)
 
-    fig = px.bar(emp.head(15), x="Nombre empresa", y="psuf_def", title="Top 15 empresas por Psuf definitiva")
+    fig = px.bar(
+        emp.head(15),
+        x="Nombre empresa",
+        y="psuf_def",
+        title="Top 15 empresas por potencia definitiva",
+    )
     st.plotly_chart(fig, use_container_width=True)
-    st.dataframe(emp, use_container_width=True)
+
+    emp_tabla = emp.copy()
+    emp_tabla["ratio"] = fmt_pct_series(emp_tabla["ratio"])
+    st.dataframe(rename_for_display(emp_tabla), use_container_width=True)
 
 with tab4:
     st.subheader("Radiografía por central")
@@ -433,11 +454,26 @@ with tab4:
         ] if c in filtered.columns
     ]].copy()
 
-    opciones_orden = [c for c in ["psuf_def", "Merma MW", "Ratio reconocimiento", "Ifor [pu]", "Variabilidad subperiodos"] if c in vista.columns]
+    opciones_orden = [
+        c for c in [
+            "psuf_def",
+            "Merma MW",
+            "Ratio reconocimiento",
+            "Ifor [pu]",
+            "Variabilidad subperiodos"
+        ] if c in vista.columns
+    ]
     orden = st.selectbox("Ordenar por", opciones_orden, index=0)
     asc = st.toggle("Orden ascendente", value=False)
     vista = vista.sort_values(orden, ascending=asc)
-    st.dataframe(vista, use_container_width=True)
+
+    vista_tabla = vista.copy()
+    if "Ratio reconocimiento" in vista_tabla.columns:
+        vista_tabla["Ratio reconocimiento"] = fmt_pct_series(vista_tabla["Ratio reconocimiento"])
+    if "Merma %" in vista_tabla.columns:
+        vista_tabla["Merma %"] = fmt_pct_series(vista_tabla["Merma %"])
+
+    st.dataframe(rename_for_display(vista_tabla), use_container_width=True)
 
 with tab5:
     st.subheader("Subperiodos y cambios de oferta")
@@ -477,7 +513,7 @@ with tab5:
             st.info("No hay fechas de cambios disponibles para los filtros actuales.")
 
     st.markdown("### Detalle de cambios de oferta")
-    st.dataframe(cambios_filtered, use_container_width=True)
+    st.dataframe(rename_for_display(cambios_filtered), use_container_width=True)
 
 st.markdown("---")
 st.caption(
