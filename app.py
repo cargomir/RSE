@@ -329,12 +329,20 @@ with tab1:
             .sum(numeric_only=True)
             .reset_index()
         )
+        resumen_sub_plot = rename_for_display(resumen_sub)
+
         fig = px.bar(
-            resumen_sub,
+            resumen_sub_plot,
             x="Subsistema",
-            y=["Pmax [MW]", "psuf_def"],
+            y=["Capacidad máxima [MW]", "Potencia definitiva [MW]"],
             barmode="group",
-            title="Pmax vs Psuf definitiva por subsistema",
+            title="Capacidad máxima vs potencia definitiva por subsistema",
+        )
+
+        fig.update_layout(
+            title_x=0.02,
+            legend_title="",
+            margin=dict(l=20, r=20, t=50, b=20)
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -345,11 +353,19 @@ with tab1:
             .reset_index()
             .sort_values("psuf_def", ascending=False)
         )
+        resumen_tec_plot = rename_for_display(resumen_tec)
+
         fig = px.pie(
-            resumen_tec,
-            names="Tipo tecnologia",
-            values="psuf_def",
-            title="Participación de Psuf definitiva por tecnología",
+            resumen_tec_plot,
+            names="Tecnología",
+            values="Potencia definitiva [MW]",
+            title="Participación de potencia definitiva por tecnología",
+        )
+
+        fig.update_layout(
+            title_x=0.02,
+            legend_title="",
+            margin=dict(l=20, r=20, t=50, b=20)
         )
         st.plotly_chart(fig, use_container_width=True)
 
@@ -379,28 +395,46 @@ with tab2:
     .sort_values("psuf_def", ascending=False)
 )
 
+    tech_plot = rename_for_display(tech)
+
     fig = px.bar(
-        tech,
-        x="Tipo tecnologia",
-        y="psuf_def",
+        tech_plot,
+        x="Tecnología",
+        y="Potencia definitiva [MW]",
         title="Potencia definitiva por tecnología",
         text_auto=".2s"
+    )
+
+    fig.update_layout(
+        title_x=0.02,
+        legend_title="",
+        margin=dict(l=20, r=20, t=50, b=20)
     )
     st.plotly_chart(fig, use_container_width=True)
 
     fig = px.scatter(
-        tech,
+        tech_plot,
         x="ifor_prom",
-        y="ratio",
+        y="Ratio reconocimiento [%]",
         size="pmax",
-        hover_name="Tipo tecnologia",
+        hover_name="Tecnología",
         title="Indisponibilidad forzada promedio vs ratio reconocimiento",
     )
-    fig.update_yaxes(tickformat=".1%")
+
+    fig.update_layout(
+        title_x=0.02,
+        legend_title="",
+        margin=dict(l=20, r=20, t=50, b=20)
+    )
+
+    fig.update_xaxes(title="Indisponibilidad forzada promedio")
+    fig.update_yaxes(title="Ratio reconocimiento", tickformat=".1%")
+    fig.update_traces(marker=dict(line=dict(width=1)))
     st.plotly_chart(fig, use_container_width=True)
 
     tech_tabla = tech.copy()
     tech_tabla["ratio"] = fmt_pct_series(tech_tabla["ratio"])
+    st.markdown("### Tabla resumen por tecnología")
     st.dataframe(rename_for_display(tech_tabla), use_container_width=True)
 
 with tab3:
@@ -418,16 +452,26 @@ with tab3:
     .sort_values("psuf_def", ascending=False)
 )
 
+    emp_plot = rename_for_display(emp.head(15))
+
     fig = px.bar(
-        emp.head(15),
-        x="Nombre empresa",
-        y="psuf_def",
+        emp_plot,
+        x="Empresa",
+        y="Potencia definitiva [MW]",
         title="Top 15 empresas por potencia definitiva",
     )
+
+    fig.update_layout(
+        title_x=0.02,
+        legend_title="",
+        margin=dict(l=20, r=20, t=50, b=20)
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
     emp_tabla = emp.copy()
     emp_tabla["ratio"] = fmt_pct_series(emp_tabla["ratio"])
+    st.markdown("### Tabla resumen por empresa")
     st.dataframe(rename_for_display(emp_tabla), use_container_width=True)
 
 with tab4:
@@ -473,6 +517,7 @@ with tab4:
     if "Merma %" in vista_tabla.columns:
         vista_tabla["Merma %"] = fmt_pct_series(vista_tabla["Merma %"])
 
+    st.markdown("### Detalle de centrales")
     st.dataframe(rename_for_display(vista_tabla), use_container_width=True)
 
 with tab5:
@@ -486,13 +531,21 @@ with tab5:
                 .sum()
                 .reset_index()
             )
+            resumen_subp_plot = rename_for_display(resumen_subp)
+
             fig = px.line(
-                resumen_subp,
+                resumen_subp_plot,
                 x="Subperiodo",
-                y="psuf_subperiodo",
-                color="Subsistema tabla",
+                y="Potencia por subperiodo [MW]",
+                color="Subsistema",
                 markers=True,
-                title="Psuf total por subperiodo",
+                title="Potencia total por subperiodo",
+            )
+
+            fig.update_layout(
+                title_x=0.02,
+                legend_title="",
+                margin=dict(l=20, r=20, t=50, b=20)
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
@@ -507,7 +560,12 @@ with tab5:
                 .reset_index(name="N cambios")
                 .sort_values("Mes")
             )
-            fig = px.bar(cambios_mes, x="Mes", y="N cambios", title="Cambios de oferta por mes")
+            fig = px.bar(cambios_mes, x="Mes", y="N cambios", title="Cantidad de cambios de oferta por mes")
+            fig.update_layout(
+                title_x=0.02,
+                legend_title="",
+                margin=dict(l=20, r=20, t=50, b=20)
+            )
             st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("No hay fechas de cambios disponibles para los filtros actuales.")
