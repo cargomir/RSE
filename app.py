@@ -16,6 +16,39 @@ APP_DIR = Path(__file__).resolve().parent
 WORKBOOK_PATH = APP_DIR / "data" / WORKBOOK_NAME
 REQUIRED_SHEETS = ["Cambios Oferta", "Factores", "Resultados", "Psuf S1", "Psuf S2"]
 
+DISPLAY_NAMES = {
+    "Potencia id": "ID potencia",
+    "Nombre empresa": "Empresa",
+    "Nombre unidad generadora": "Central",
+    "Tipo tecnologia": "Tecnología",
+    "Subsistema": "Subsistema",
+    "Combustible nombre": "Combustible",
+    "Potencia [MW]": "Potencia [MW]",
+    "Pmax [MW]": "Capacidad máxima [MW]",
+    "Pini [MW]": "Potencia inicial [MW]",
+    "Peq [MW]": "Potencia equivalente [MW]",
+    "Fmm [pu]": "Factor de mantenimiento [pu]",
+    "Ifor [pu]": "Indisponibilidad forzada [pu]",
+    "CCPP [pu]": "Consumos propios [pu]",
+    "psuf_pre": "Potencia preliminar [MW]",
+    "psuf_def": "Potencia definitiva [MW]",
+    "Merma MW": "Merma [MW]",
+    "Merma %": "Merma [%]",
+    "Ratio reconocimiento": "Reconocimiento [%]",
+    "Psuf promedio subperiodos": "Potencia promedio subperiodos [MW]",
+    "Variabilidad subperiodos": "Variabilidad subperiodos [MW]",
+    "Psuf min subperiodo": "Potencia mínima subperiodo [MW]",
+    "Psuf max subperiodo": "Potencia máxima subperiodo [MW]",
+    "N subperiodos": "Número de subperiodos",
+    "Fecha cambio": "Fecha de cambio",
+    "Causa": "Causa",
+    "Subperiodo": "Subperiodo",
+    "psuf_subperiodo": "Potencia por subperiodo [MW]",
+    "Subsistema tabla": "Subsistema"
+}
+
+def rename_for_display(df: pd.DataFrame) -> pd.DataFrame:
+    return df.rename(columns={c: DISPLAY_NAMES.get(c, c) for c in df.columns})
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
@@ -216,18 +249,25 @@ st.markdown(
     <style>
     .kpi-card {
         background-color: #f8fafc;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #dbe3ea;
         border-radius: 14px;
-        padding: 18px 20px;
-        margin-bottom: 10px;
+        padding: 12px 14px;
+        margin-bottom: 8px;
+        min-height: 95px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
     }
     .kpi-title {
         font-size: 0.95rem;
-        color: #475569;
-        margin-bottom: 8px;
+        color: #4b5c6b;
+        margin-bottom: 6px;
+        font-weight: 500;
     }
     .kpi-value {
-        font-size: 2rem;
+        font-size: 1.8rem;
         font-weight: 700;
         color: #0f172a;
         line-height: 1.1;
@@ -248,24 +288,24 @@ def kpi_card(title, value):
         unsafe_allow_html=True
     )
 
-fila1 = st.columns(3)
-fila2 = st.columns(4)
+fila1 = st.columns(3, gap="small")
+fila2 = st.columns(4, gap="small")
 
 with fila1[0]:
-    kpi_card("Unidades", f"{total_unidades:,}".replace(",", "."))
+    kpi_card("Centrales", f"{total_unidades:,}".replace(",", "."))
 with fila1[1]:
     kpi_card("Empresas", f"{total_empresas:,}".replace(",", "."))
 with fila1[2]:
     kpi_card("Reconocimiento total", f"{ratio_total:.1%}" if pd.notna(ratio_total) else "-")
 
 with fila2[0]:
-    kpi_card("Pmax total [MW]", fmt_mw(pmax_total))
+    kpi_card("Capacidad máxima [MW]", fmt_mw(pmax_total))
 with fila2[1]:
-    kpi_card("Pini total [MW]", fmt_mw(pini_total))
+    kpi_card("Potencia inicial [MW]", fmt_mw(pini_total))
 with fila2[2]:
-    kpi_card("Psuf_pre total [MW]", fmt_mw(psuf_pre_total))
+    kpi_card("Potencia preliminar [MW]", fmt_mw(psuf_pre_total))
 with fila2[3]:
-    kpi_card("Psuf_def total [MW]", fmt_mw(psuf_def_total))
+    kpi_card("Potencia definitiva [MW]", fmt_mw(psuf_def_total))
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "Resumen sistema",
